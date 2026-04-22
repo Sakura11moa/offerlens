@@ -4,7 +4,9 @@ services:
       context: ./backend
     container_name: offerlens-backend
     environment:
+      - APP_NAME=${APP_NAME:-OfferLens Backend}
       - APP_ENV=${APP_ENV:-dev}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
       - LLM_BASE_URL=${LLM_BASE_URL:-}
       - LLM_API_KEY=${LLM_API_KEY:-}
       - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}

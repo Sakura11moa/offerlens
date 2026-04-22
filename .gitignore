@@ -4,3 +4,4 @@ __pycache__/
 frontend/node_modules/
 OfferLens_V2_真实大模型接入版项目需求文档.docx
 *.docx
+frontend/dist/

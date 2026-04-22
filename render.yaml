@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: offerlens-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_NAME
+        value: OfferLens Backend
+      - key: APP_ENV
+        value: prod
+      - key: CORS_ORIGINS
+        sync: false
+      - key: LLM_BASE_URL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        value: gpt-4o-mini
+      - key: LLM_TIMEOUT
+        value: "30"
+      - key: LLM_CONNECT_TIMEOUT
+        value: "5"
+      - key: LLM_READ_TIMEOUT
+        value: "45"
+      - key: LLM_WRITE_TIMEOUT
+        value: "20"
+      - key: LLM_POOL_TIMEOUT
+        value: "10"
+      - key: LLM_MAX_RETRIES
+        value: "1"
+      - key: LLM_RETRY_BACKOFF
+        value: "1.0"

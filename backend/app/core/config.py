@@ -8,8 +8,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "OfferLens Backend"
+    app_name: str = Field(default="OfferLens Backend", alias="APP_NAME")
     app_env: str = Field(default="dev", alias="APP_ENV")
+    cors_origins: str = Field(default="*", alias="CORS_ORIGINS")
 
     llm_base_url: str = Field(default="", alias="LLM_BASE_URL")
     llm_api_key: str = Field(default="", alias="LLM_API_KEY")
@@ -45,6 +46,15 @@ class Settings(BaseSettings):
     @property
     def llm_total_attempts(self) -> int:
         return max(1, int(self.llm_max_retries) + 1)
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        raw = self.cors_origins.strip()
+        if not raw:
+            return ["*"]
+        if raw == "*":
+            return ["*"]
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
 @lru_cache

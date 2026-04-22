@@ -9,11 +9,12 @@ from app.core.config import get_settings
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0")
+cors_origins = settings.cors_origins_list
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials="*" not in cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
