@@ -131,11 +131,12 @@ class AnalyzerService:
     def _post_process_response(self, response: AnalyzeResponse, request: AnalyzeRequest) -> AnalyzeResponse:
         strengths = self._clean_list(response.strengths, limit=4, max_length=70)
         weaknesses = self._clean_list(response.weaknesses, limit=4, max_length=70)
-        missing_keywords = self._clean_list(response.missing_keywords, limit=8, max_length=24)
         rewrite_suggestions = self._clean_list(response.rewrite_suggestions, limit=5, max_length=90)
         interview_questions = self._clean_list(response.interview_questions, limit=6, max_length=90)
         summary = self._clean_summary(response.summary)
 
+        jd_keywords = self._extract_jd_keywords(request.job_description, [])
+        missing_keywords = self._clean_missing_keywords(response.missing_keywords, jd_keywords, limit=8)
         jd_keywords = self._extract_jd_keywords(request.job_description, missing_keywords)
         matched_keywords = self._match_keywords(jd_keywords, request.resume_text)
         has_metrics = self._has_quantified_results(request.resume_text)
@@ -174,7 +175,9 @@ class AnalyzerService:
             matched_keywords=matched_keywords,
             jd_keywords=jd_keywords,
             missing_keywords=missing_keywords,
+            strengths=strengths,
             weaknesses=weaknesses,
+            summary=summary,
             has_metrics=has_metrics,
             has_project_evidence=has_project_evidence,
         )
@@ -221,16 +224,76 @@ class AnalyzerService:
     @staticmethod
     def _clean_summary(summary: str) -> str:
         text = re.sub(r"\s+", " ", str(summary or "")).strip()
-        text = text.strip(TRIM_CHARS)
-        if len(text) > 120:
-            truncated = text[:120]
-            last_cut = max(
-                truncated.rfind(SUMMARY_ENDINGS[0]),
-                truncated.rfind(SUMMARY_ENDINGS[1]),
-                truncated.rfind(SUMMARY_ENDINGS[2]),
-            )
-            text = truncated[: last_cut + 1] if last_cut >= 30 else truncated.rstrip(TRIM_CHARS) + SUMMARY_ENDINGS[0]
+        if not text:
+            return ""
+
+        text = text.strip()
+        sentence_endings = ("\u3002", "\uff01", "!", "\uff1f", "?", "\uff1b")
+
+        if len(text) > 180:
+            truncated = text[:180]
+            last_cut = max(truncated.rfind(end) for end in sentence_endings)
+            if last_cut >= 40:
+                text = truncated[: last_cut + 1].strip()
+            else:
+                text = truncated.rstrip(TRIM_CHARS + ",;:") + "\u3002"
+
+        text = text.rstrip()
+        if text.endswith(("\uff0c", ",", "\u3001", "\uff1a", ":", "\uff1b", ";")):
+            text = text.rstrip(TRIM_CHARS + ",;:") + "\u3002"
+
+        if not text.endswith(("\u3002", "\uff01", "!", "\uff1f", "?")):
+            text += "\u3002"
+
         return text
+
+    @staticmethod
+    def _split_keyword_candidates(text: str) -> list[str]:
+        parts = re.split(r"[,\uff0c\u3001;/\uff1b|\n\r]+", text)
+        return [part.strip(TRIM_CHARS + " ") for part in parts if part.strip(TRIM_CHARS + " ")]
+
+    def _repair_truncated_keyword(self, token: str, jd_keywords: list[str]) -> str:
+        cleaned = token.strip()
+        if not cleaned:
+            return ""
+
+        has_ellipsis = cleaned.endswith("\u2026") or cleaned.endswith("...") or cleaned.endswith("..")
+        prefix = re.sub(r"(\u2026|\.{2,})$", "", cleaned).strip(TRIM_CHARS + " ")
+        if not prefix:
+            return ""
+        if not has_ellipsis:
+            return prefix
+
+        prefix_lower = prefix.lower()
+        candidates = [kw for kw in jd_keywords if kw.lower().startswith(prefix_lower) and len(kw) > len(prefix)]
+        if candidates:
+            candidates.sort(key=len)
+            return candidates[0]
+        return prefix
+
+    def _clean_missing_keywords(self, items: Iterable[str], jd_keywords: list[str], limit: int) -> list[str]:
+        cleaned: list[str] = []
+        seen: set[str] = set()
+
+        for raw_item in items:
+            base = re.sub(r"\s+", " ", str(raw_item or "")).strip()
+            base = re.sub(r"^[\-\*\d\.\)\u2022\s]+", "", base)
+            if not base:
+                continue
+
+            for part in self._split_keyword_candidates(base):
+                repaired = self._repair_truncated_keyword(part, jd_keywords)
+                if not repaired:
+                    continue
+                normalized = repaired.lower()
+                if normalized in seen:
+                    continue
+                seen.add(normalized)
+                cleaned.append(repaired)
+                if len(cleaned) >= limit:
+                    return cleaned
+
+        return cleaned
 
     @staticmethod
     def _extract_jd_keywords(job_description: str, missing_keywords: list[str]) -> list[str]:
@@ -397,7 +460,9 @@ class AnalyzerService:
         matched_keywords: list[str],
         jd_keywords: list[str],
         missing_keywords: list[str],
+        strengths: list[str],
         weaknesses: list[str],
+        summary: str,
         has_metrics: bool,
         has_project_evidence: bool,
     ) -> int:
@@ -429,6 +494,46 @@ class AnalyzerService:
 
         if not has_project_evidence:
             adjusted -= 5
+
+        summary_lower = summary.lower()
+        strong_summary = any(
+            keyword in summary_lower
+            for keyword in (
+                "\u8f83\u5f3a\u5339\u914d",
+                "\u9ad8\u5ea6\u5339\u914d",
+                "\u5339\u914d\u5ea6\u8f83\u9ad8",
+                "\u603b\u4f53\u5339\u914d\u5ea6\u8f83\u9ad8",
+            )
+        )
+        medium_summary = any(
+            keyword in summary_lower
+            for keyword in (
+                "\u4e00\u5b9a\u5339\u914d",
+                "\u57fa\u672c\u5339\u914d",
+                "\u5b58\u5728\u4e00\u5b9a\u5339\u914d",
+            )
+        )
+        weak_summary = any(
+            keyword in summary_lower
+            for keyword in (
+                "\u5339\u914d\u5ea6\u6709\u9650",
+                "\u5339\u914d\u8f83\u5f31",
+                "\u5dee\u8ddd\u8f83\u5927",
+                "\u4e0d\u592a\u5339\u914d",
+            )
+        )
+
+        strong_strength_signal = len(strengths) >= 3 and match_ratio >= 0.5 and len(missing_keywords) <= 2
+        if strong_summary and len(strengths) >= 2:
+            adjusted = max(adjusted, 72)
+        elif medium_summary and len(strengths) >= 2:
+            adjusted = max(adjusted, 60)
+
+        if strong_strength_signal:
+            adjusted = max(adjusted, 68)
+
+        if weak_summary:
+            adjusted = min(adjusted, 58)
 
         return max(15, min(100, adjusted))
 
