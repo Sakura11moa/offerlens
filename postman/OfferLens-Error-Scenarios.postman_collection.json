@@ -1,0 +1,163 @@
+{
+  "info": {
+    "_postman_id": "5f67d67a-e8ca-4b6a-b8bc-5d99056f1cc4",
+    "name": "OfferLens Error Scenarios",
+    "description": "Test non-200 and failure branches for frontend error mapping.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    }
+  ],
+  "item": [
+    {
+      "name": "Analyze - 200 Success (Baseline)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resume_text\": \"3年前端开发经验，使用Vue3和TypeScript参与中后台系统开发，优化首屏性能。\",\n  \"job_description\": \"前端工程师，要求Vue3、TypeScript、性能优化、工程化能力。\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/analyze",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "analyze"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analyze - 422 Too Short",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resume_text\": \"太短\",\n  \"job_description\": \"也太短\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/analyze",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "analyze"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analyze - 422 Missing Field",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resume_text\": \"只有一个字段\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/analyze",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "analyze"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analyze - 405 Wrong Method",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/api/analyze",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "analyze"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analyze - 404 Wrong Path",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resume_text\": \"abc\",\n  \"job_description\": \"def\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/analyze_xxx",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "analyze_xxx"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Analyze - Network Failure (Edit baseUrl to invalid host)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"resume_text\": \"3年前端开发经验，参与Vue3项目。\",\n  \"job_description\": \"前端岗位，要求Vue3。\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/analyze",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "analyze"
+          ]
+        },
+        "description": "To simulate connection error, temporarily set collection variable baseUrl to http://127.0.0.1:9999 (or stop backend)."
+      }
+    }
+  ]
+}

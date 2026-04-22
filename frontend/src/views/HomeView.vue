@@ -126,6 +126,7 @@ async function handleAnalyze() {
       resume_text: resumeText.value,
       job_description: jobDescription.value,
     });
+    errorMessage.value = "";
 
     await nextTick();
     resultSectionRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
