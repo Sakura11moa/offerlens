@@ -1,0 +1,6 @@
+.env
+__pycache__/
+*.pyc
+frontend/node_modules/
+OfferLens_V2_真实大模型接入版项目需求文档.docx
+*.docx
