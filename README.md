@@ -1,5 +1,6 @@
 # OfferLens
 试用网址：https://offerlens-67je.vercel.app/
+
 OfferLens 是一个 AI 求职提效工具。用户输入简历与岗位描述（JD），系统输出：
 - 匹配度分数
 - 优势项
